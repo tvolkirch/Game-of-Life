@@ -1,0 +1,422 @@
+<!DOCTYPE html5>
+<html>
+<head>
+    <title>Game of Life Unit Tests</title>    
+    <meta charset="UTF-8">    
+    <script type="text/javascript" src="jquery-min.js"></script>
+</head>
+<body>
+
+<h3 id="mainTitle">Game of Life Unit Tests</h3>
+
+<p>Open browser console to see unit test results.</p>
+
+<script type="text/javascript">
+
+var scriptName = "my_gol.js";
+var testPass = true;
+var allTestsPass = true;
+var foundLiveCell = false;    
+
+var utils = 
+{
+    assertEqual: function(value1, value2)
+    {
+        return (value1 === value2);
+    },
+    
+    assertIsValidValue: function(value, validValueList)
+    {
+        var matchedValue = false;        
+        var valueCount = validValueList.length;
+
+        while (valueCount--)
+        {
+            if (value === validValueList[valueCount])
+            {
+                matchedValue = true;
+                break;
+            }
+        }
+        
+        if (value)
+        {
+            foundLiveCell = true;
+        }
+        
+        return matchedValue;
+    },
+    
+    getRandomInt(min, max)
+    {
+        return Math.floor(Math.random() * (max - min)) + min;
+    },
+    
+    setSeedPattern()
+    {
+        var liveCells = new Array();
+        
+    // this seed pattern should die out on the 19th generation
+        
+        liveCells[[30,30]] = true;
+        liveCells[[31,30]] = true;
+        liveCells[[31,32]] = true;
+        liveCells[[32,30]] = true;
+        liveCells[[32,31]] = true;
+        liveCells[[33,30]] = true;
+        liveCells[[34,30]] = true;
+        liveCells[[34,31]] = true;
+        liveCells[[35,30]] = true;
+        liveCells[[35,32]] = true;
+      
+        return liveCells;
+    }
+
+};
+
+var tests =
+{
+    testUnderpopulatedCell: function() 
+    {
+        if (!window.isLiveCellStillAlive)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        for (var liveNeighborCount = 0; liveNeighborCount < 2; liveNeighborCount++)
+        {
+            if ( !utils.assertEqual(false, isLiveCellStillAlive(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testOvercrowdedCell: function() 
+    {
+        if (!window.isLiveCellStillAlive)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        for (var liveNeighborCount = 4; liveNeighborCount < 9; liveNeighborCount++)
+        {
+            if ( !utils.assertEqual(false, isLiveCellStillAlive(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testHealthyCell: function() 
+    {
+        if (!window.isLiveCellStillAlive)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        for (var liveNeighborCount = 2; liveNeighborCount < 4; liveNeighborCount++)
+        {
+            if ( !utils.assertEqual(true, isLiveCellStillAlive(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testRevivedCell: function() 
+    {
+        var liveNeighborCount = 3;
+        
+        if (!window.isDeadCellRevived)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        testPass = utils.assertEqual( true, isDeadCellRevived(liveNeighborCount) );
+    },
+    
+    testPersistentlyDeadCell: function() 
+    {
+        var liveNeighborCount;
+        
+        if (!window.isDeadCellRevived)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        for (liveNeighborCount = 0; liveNeighborCount < 2; liveNeighborCount++)
+        {
+            if ( !utils.assertEqual(false, isDeadCellRevived(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+        
+        for (liveNeighborCount = 4; liveNeighborCount < 9; liveNeighborCount++)
+        {
+            if ( !utils.assertEqual(false, isDeadCellRevived(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGetCellStatus: function()
+    {
+        var liveCells = [];
+        var isCellAlive;
+    
+        if ( !window.getCellStatus )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[30, 30]] = true;
+        
+        if ( !utils.assertEqual(true, getCellStatus(liveCells, 30, 30)) )
+        {
+            testPass = false;
+        }
+        
+        if ( !utils.assertEqual(undefined, getCellStatus(liveCells, 30, 31)) )
+        {
+            testPass = false;
+        }
+    },
+    
+    testGridInitialization: function()
+    {
+        var maxCellTestCount = 1500000;
+        var rows = 10000;
+        var cols = 1000;
+        var validValueList = [undefined, true];
+        var liveCells = [];
+        var isCellAlive;
+    
+        if ( !window.getCellStatus )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells = utils.setSeedPattern();
+        
+        while (maxCellTestCount--)
+        {
+            rowPos = utils.getRandomInt(0, rows);
+            colPos = utils.getRandomInt(0, cols);
+            
+            isCellAlive = getCellStatus(liveCells, rowPos, colPos);
+            
+            if ( !utils.assertIsValidValue(isCellAlive, validValueList) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGetLiveNeighborCount: function()
+    {
+        var liveCells = [];
+        var liveNeighborCount = 0;
+        var rows, cols;
+            
+        if ( !window.getLiveNeighborCount )
+        {
+            testPass = false;
+            return;
+        }
+        
+        if ( !utils.assertEqual(0, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[31,30]] = true;
+        if ( !utils.assertEqual(1, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[31,29]] = true;
+        if ( !utils.assertEqual(2, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[30,29]] = true;
+        if ( !utils.assertEqual(3, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[29,29]] = true;
+        if ( !utils.assertEqual(4, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[29,30]] = true;
+        if ( !utils.assertEqual(5, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[29,31]] = true;
+        if ( !utils.assertEqual(6, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[30,31]] = true;
+        if ( !utils.assertEqual(7, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[31,31]] = true;
+        if ( !utils.assertEqual(8, getLiveNeighborCount(liveCells, 30, 30)) )
+        {
+            testPass = false;
+            return;
+        }
+    },
+    
+    testGetNextGeneration: function()
+    {    
+        var liveCells = new Array();
+        var nextGenLiveCells = new Array();
+        var key, keyArray = [];
+        var i;
+        var generations = 18;
+    
+        if ( !window.getNextGeneration )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells = utils.setSeedPattern();
+        
+        nextGenLiveCells = getNextGeneration(liveCells);
+        
+        if ( !utils.assertEqual(9, Object.keys(nextGenLiveCells).length) )
+        {
+            testPass = false;
+            return;
+        }
+
+        for (i = 3; i <= generations; i++)
+        {
+            liveCells = new Array();
+            
+            for ( key in nextGenLiveCells )
+            {
+                keyArray = key.split(",");
+                row = keyArray[0];
+                col = keyArray[1];
+                
+                liveCells[[row,col]] = true;
+            }
+
+            nextGenLiveCells = getNextGeneration(liveCells);
+        }
+        
+        if ( !utils.assertEqual(2, Object.keys(nextGenLiveCells).length) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells = new Array();
+            
+        for ( key in nextGenLiveCells )
+        {
+            keyArray = key.split(",");
+            row = keyArray[0];
+            col = keyArray[1];
+                
+            liveCells[[row,col]] = true;
+        }
+
+        nextGenLiveCells = getNextGeneration(liveCells);
+        
+        if ( !utils.assertEqual(0, Object.keys(nextGenLiveCells).length) )
+        {
+            testPass = false;
+            return;
+        }
+    }
+};
+
+$.getScript(scriptName)
+    .done(function() 
+    {
+        var testCount = 0;
+        var startTime = new Date().getTime();
+        var endTime;
+        
+        window.console.log("successfully loaded " + scriptName + " script for testing");
+        
+        for (var testname in tests)
+        {
+            if (tests.hasOwnProperty(testname) )
+            {
+                tests[testname]();
+                
+                window.console.log(" ");
+                window.console.log(testname + " passes all tests: " + testPass);
+                
+                allTestsPass = allTestsPass && testPass;
+                testPass = true;
+                testCount++;
+            }
+        }
+        
+        endTime = new Date().getTime();
+
+        window.console.log(" ");
+        window.console.log("Test count: " + testCount);
+        window.console.log("All tests pass: " + allTestsPass);
+        window.console.log("Run-time in seconds: " + (endTime - startTime)/1000);
+        
+        window.console.log(" ");
+        if (foundLiveCell)
+        {
+            window.console.log("Found a live cell! :)");
+        }
+        else
+        {
+            window.console.log("Didn't find a live cell. :(");
+        }
+    })
+    .fail(function() 
+    {
+        window.console.log("failed to load " + scriptName + " script for testing");
+    });
+
+</script>
+
+</body>
+</html>
