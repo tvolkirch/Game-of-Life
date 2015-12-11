@@ -1,0 +1,550 @@
+<!DOCTYPE html5>
+<html>
+<head>
+    <title>Game of Life Unit Tests</title>    
+    <meta charset="UTF-8">    
+    <script type="text/javascript" src="jquery-min.js"></script>
+</head>
+<body>
+
+<h3 id="mainTitle">Game of Life Unit Tests</h3>
+
+<p>Open browser console to see unit test results.</p>
+
+<script type="text/javascript">
+
+var scriptName = "my_gol.js";
+var testPass = true;
+var allTestsPass = true;
+
+var asserts = 
+{
+    assertEqual: function(value1, value2)
+    {
+        return (value1 === value2);
+    },
+    
+    assertIsValidValue: function(value, validValueList)
+    {
+        var matchedValue = false;        
+        var valueCount = validValueList.length;
+
+        while (valueCount--)
+        {
+            if (value === validValueList[valueCount])
+            {
+                matchedValue = true;
+                break;
+            }
+        }
+        
+        return matchedValue;
+    }
+};
+
+var liveGrid =
+{    
+    getRandomInt(min, max)
+    {
+        return Math.floor(Math.random() * (max - min)) + min;
+    },
+    
+    getFlatGridMap(row, col)
+    {
+        var positionList = new Array();
+        
+        positionList[0] = [row-1, col-1];
+        positionList[1] = [row-1, col];
+        positionList[2] = [row-1, col+1];
+        positionList[3] = [row, col-1];
+        positionList[4] = [row, col+1];
+        positionList[5] = [row+1, col-1];
+        positionList[6] = [row+1, col];
+        positionList[7] = [row+1, col+1];
+        
+        return positionList;
+    },
+    
+    setRandomLiveNeighbors(row, col, liveNeighborCount)
+    {
+        var neighborhood = new Array();
+        var positionList = new Array();
+        var positionListSize = 0;
+        var counter, i;
+        
+        if (liveNeighborCount === 0)
+        {
+            return neighborhood;
+        }
+        
+        positionList = liveGrid.getFlatGridMap(row, col);
+        
+        for (counter = 0; counter < liveNeighborCount; counter++)
+        {
+            positionListSize = Object.keys(positionList).length
+            i = liveGrid.getRandomInt(0, positionListSize);
+            neighborhood[ positionList[i] ] = true;
+            positionList.splice(i, 1);
+        }
+        
+        return neighborhood;
+    },
+    
+    setSeedPatternThatDiesOutGen19()
+    {
+        var liveCells = new Array();
+        
+        liveCells[[30,30]] = true;
+        liveCells[[31,30]] = true;
+        liveCells[[31,32]] = true;
+        liveCells[[32,30]] = true;
+        liveCells[[32,31]] = true;
+        liveCells[[33,30]] = true;
+        liveCells[[34,30]] = true;
+        liveCells[[34,31]] = true;
+        liveCells[[35,30]] = true;
+        liveCells[[35,32]] = true;
+      
+        return liveCells;
+    },
+    
+    getDeadNeighbors(liveCells)
+    {
+        var deadNeighbors = new Array();
+        var i, j, row, col;
+        var key, keyArray = [];
+        
+        for ( key in liveCells )
+        {
+            keyArray = key.split(",");
+            row = window.parseInt(keyArray[0]);
+            col = window.parseInt(keyArray[1]);
+        
+            if ( window.isNaN(row) || window.isNaN(col) )
+            {
+                return new Array();
+            }
+       
+            for ( i = row-1; i <= row+1; i++)
+            {
+                for ( j = col-1; j <= col+1; j++)
+                {
+                    if (i !== row || j !== col)
+                    {
+                        if (!liveCells[[i,j]] && !deadNeighbors[[i,j]])
+                        {
+                            deadNeighbors[[i,j]] = true;
+                        }
+                    }
+                }
+            }
+        }
+        
+        return deadNeighbors;
+    }
+};
+
+var tests =
+{
+    testUnderpopulatedCell: function() 
+    {
+        var liveNeighborCount = 0;
+        
+        if (!window.isLiveCellStillAlive)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        testPass = asserts.assertEqual( false, isLiveCellStillAlive(liveNeighborCount) ) 
+                && asserts.assertEqual( false, isLiveCellStillAlive(liveNeighborCount+1) );
+    },
+    
+    testOvercrowdedCell: function() 
+    {
+        if (!window.isLiveCellStillAlive)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        for (var liveNeighborCount = 4; liveNeighborCount < 9; liveNeighborCount++)
+        {
+            if ( !asserts.assertEqual(false, isLiveCellStillAlive(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testHealthyCell: function() 
+    {
+        var liveNeighborCount = 2;
+    
+        if (!window.isLiveCellStillAlive)
+        {
+            testPass = false;
+            return; 
+        }
+
+        testPass = asserts.assertEqual( true, isLiveCellStillAlive(liveNeighborCount) ) 
+                && asserts.assertEqual( true, isLiveCellStillAlive(liveNeighborCount+1) );
+    },
+    
+    testRevivedCell: function() 
+    {
+        var liveNeighborCount = 3;
+        
+        if (!window.isDeadCellRevived)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        testPass = asserts.assertEqual( true, isDeadCellRevived(liveNeighborCount) );
+    },
+    
+    testPersistentlyDeadCell: function() 
+    {
+        var liveNeighborCount;
+        
+        if (!window.isDeadCellRevived)
+        {
+            testPass = false;
+            return; 
+        }
+        
+        for (liveNeighborCount = 0; liveNeighborCount < 9; liveNeighborCount++)
+        {
+            if ( liveNeighborCount === 3) { continue; }
+            if ( !asserts.assertEqual(false, isDeadCellRevived(liveNeighborCount)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGetCellStatus: function()
+    {
+        var liveCells = [];
+        var isCellAlive;
+    
+        if ( !window.getCellStatus )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells[[30, 30]] = true;
+        
+        if ( !asserts.assertEqual(true, getCellStatus(liveCells, 30, 30)) )
+        {
+            testPass = false;
+        }
+        
+        if ( !asserts.assertEqual(undefined, getCellStatus(liveCells, 30, 31)) )
+        {
+            testPass = false;
+        }
+        
+        if ( !asserts.assertEqual(false, getCellStatus(liveCells, "A1", "B2")) )
+        {
+            testPass = false;
+        }
+    },
+    
+    testGetLiveNeighborCount: function()
+    {
+        var liveCells = new Array();
+        var liveNeighborCount;
+        var row = 30;
+        var col = 30;
+            
+        if ( !window.getLiveNeighborCount )
+        {
+            testPass = false;
+            return;
+        }
+
+        for (liveNeighborCount = 0; liveNeighborCount < 9; liveNeighborCount++)
+        {
+            liveCells = liveGrid.setRandomLiveNeighbors(row, col, liveNeighborCount);
+            
+            if ( !asserts.assertEqual(liveNeighborCount, getLiveNeighborCount(liveCells, row, col)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testRulesAppliedToAllLiveCells()
+    {
+        var liveCells = new Array();
+        var testedLiveCells = new Array();
+        var nextGenLiveCells = new Array();
+        var key, keyArray = [];
+        var row, col;
+        var liveCellCount;
+        var testedLiveCellCount;
+        var appliedRuleCount = 0;
+        var savedFunction1, savedFunction2;
+    
+        if ( !window.getNextGeneration || !window.isLiveCellStillAlive )
+        {
+            testPass = false;
+            return;
+        }
+
+        savedFunction1 = window.getLiveNeighborCountOfLiveCell;
+        window.getLiveNeighborCountOfLiveCell = function(liveCells, row, col)
+        {
+            testedLiveCells[[row,col]] = true;
+        };
+        
+        savedFunction2 = window.isLiveCellStillAlive;
+        window.isLiveCellStillAlive = function(liveNeighborCount)
+        {
+            appliedRuleCount++;
+        };
+        
+        liveCells = liveGrid.setSeedPatternThatDiesOutGen19();        
+        nextGenLiveCells = getNextGeneration(liveCells);
+        
+        window.getLiveNeighborCountOfLiveCell = savedFunction1;
+        window.isLiveCellStillAlive = savedFunction2;
+        
+        liveCellCount = Object.keys(liveCells).length;
+        testedLiveCellCount = Object.keys(testedLiveCells).length;
+            
+        if ( !asserts.assertEqual(liveCellCount, testedLiveCellCount) )
+        {
+            testPass = false;
+            return;
+        }
+            
+        if ( !asserts.assertEqual(liveCellCount, appliedRuleCount) )
+        {
+            testPass = false;
+            return;
+        }
+            
+        for ( key in testedLiveCells )
+        {
+            keyArray = key.split(",");
+            row = keyArray[0];
+            col = keyArray[1];
+
+            if ( window.isNaN(row) || window.isNaN(col) || !liveCells[[row,col]] )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testRulesAppliedToAllDeadNeighborCellsOfLiveCells()
+    {
+        var liveCells = new Array();
+        var testedDeadNeighborCellsOfLiveCells = new Array();
+        var deadNeighborsOfLiveCells = new Array();
+        var nextGenLiveCells = new Array();
+        var key, keyArray = [];
+        var row, col;
+        var deadNeighborsOfLiveCellsCount;
+        var testedDeadNeighborOfLiveCellCount;
+        var appliedRuleCount = 0;
+        var savedFunction1, savedFunction2;
+    
+        if ( !window.getNextGeneration || !window.isDeadCellRevived )
+        {
+            testPass = false;
+            return;
+        }
+
+        savedFunction1 = window.getLiveNeighborCountOfLiveCell;
+        window.getLiveNeighborCountOfDeadNeighborCell = function(liveCells, row, col)
+        {
+            testedDeadNeighborCellsOfLiveCells[[row,col]] = true;
+        };
+        
+        savedFunction2 = window.isDeadCellRevived;
+        window.isDeadCellRevived = function(liveNeighborCount)
+        {
+            appliedRuleCount++;
+        };
+        
+        liveCells = liveGrid.setSeedPatternThatDiesOutGen19();
+        deadNeighborsOfLiveCells = liveGrid.getDeadNeighbors(liveCells);
+        nextGenLiveCells = getNextGeneration(liveCells);
+        
+        window.getLiveNeighborCountOfDeadNeighborCell = savedFunction1;
+        window.isDeadCellRevived = savedFunction2;
+        
+        testedDeadNeighborOfLiveCellCount = Object.keys(testedDeadNeighborCellsOfLiveCells).length;
+        deadNeighborsOfLiveCellsCount = Object.keys(deadNeighborsOfLiveCells).length;
+            
+        if ( !asserts.assertEqual(deadNeighborsOfLiveCellsCount, testedDeadNeighborOfLiveCellCount) )
+        {
+            testPass = false;
+        }
+        
+        if ( !asserts.assertEqual(deadNeighborsOfLiveCellsCount, appliedRuleCount) )
+        {
+            testPass = false;
+        }
+        
+        for ( key in testedDeadNeighborCellsOfLiveCells )
+        {
+            keyArray = key.split(",");
+            row = keyArray[0];
+            col = keyArray[1];
+        
+            if ( window.isNaN(row) || window.isNaN(col) || !deadNeighborsOfLiveCells[[row,col]] )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGridInitialization: function()
+    {
+        var maxCellTestCount = 150000;
+        var rows = 1000;
+        var cols = 1000;
+        var validValueList = [undefined, true];
+        var liveCells = [];
+        var isCellAlive;
+    
+        if ( !window.getCellStatus )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells = liveGrid.setSeedPatternThatDiesOutGen19();
+        
+        while (maxCellTestCount--)
+        {
+            rowPos = liveGrid.getRandomInt(0, rows);
+            colPos = liveGrid.getRandomInt(0, cols);
+            
+            isCellAlive = getCellStatus(liveCells, rowPos, colPos);
+            
+            if ( !asserts.assertIsValidValue(isCellAlive, validValueList) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGetNextGeneration: function()
+    {    
+        var liveCells = new Array();
+        var nextGenLiveCells = new Array();
+        var key, keyArray = [];
+        var i;
+        var generations = 18;
+    
+        if ( !window.getNextGeneration )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells = liveGrid.setSeedPatternThatDiesOutGen19();        
+        nextGenLiveCells = getNextGeneration(liveCells);
+        
+        if ( !asserts.assertEqual(9, Object.keys(nextGenLiveCells).length) )
+        {
+            testPass = false;
+            return;
+        }
+
+        for (i = 3; i <= generations; i++)
+        {
+            liveCells = new Array();
+            
+            for ( key in nextGenLiveCells )
+            {
+                keyArray = key.split(",");
+                row = keyArray[0];
+                col = keyArray[1];
+                
+                liveCells[[row,col]] = true;
+            }
+
+            nextGenLiveCells = getNextGeneration(liveCells);
+        }
+        
+        if ( !asserts.assertEqual(2, Object.keys(nextGenLiveCells).length) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        liveCells = new Array();
+            
+        for ( key in nextGenLiveCells )
+        {
+            keyArray = key.split(",");
+            row = keyArray[0];
+            col = keyArray[1];
+                
+            liveCells[[row,col]] = true;
+        }
+
+        nextGenLiveCells = getNextGeneration(liveCells);
+        
+        if ( !asserts.assertEqual(0, Object.keys(nextGenLiveCells).length) )
+        {
+            testPass = false;
+            return;
+        }
+    }
+};
+
+$.getScript(scriptName)
+    .done(function() 
+    {
+        var testCount = 0;
+        var startTime = new Date().getTime();
+        var endTime;
+        
+        window.console.log("successfully loaded " + scriptName + " script for testing");
+        
+        for (var testname in tests)
+        {
+            if (tests.hasOwnProperty(testname) )
+            {
+                tests[testname]();
+                
+                window.console.log(" ");
+                window.console.log(testname + " passes all tests: " + testPass);
+                
+                allTestsPass = allTestsPass && testPass;
+                testPass = true;
+                testCount++;
+            }
+        }
+        
+        endTime = new Date().getTime();
+
+        window.console.log(" ");
+        window.console.log("Test count: " + testCount);
+        window.console.log("All tests pass: " + allTestsPass);
+        window.console.log("Run-time in seconds: " + (endTime - startTime)/1000);
+    })
+    .fail(function() 
+    {
+        window.console.log("failed to load " + scriptName + " script for testing");
+    });
+
+</script>
+
+</body>
+</html>
