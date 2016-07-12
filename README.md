@@ -1,6 +1,6 @@
 # Game-of-Life
 
-This is a work in progress. Both testGridInitialization and testGetNextGeneration need fixing.
+This code is complete.
 
 With the console open in Firefox, open the html file. The unit tests will run automatically and display results in the console.
 
