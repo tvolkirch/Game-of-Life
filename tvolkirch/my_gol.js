@@ -9,7 +9,7 @@ var isDeadCellRevived = function(liveNeighborCount)
     return (liveNeighborCount === 3);
 };
 
-var getCellStatus = function(liveCells, row, col)
+var getCellStatus = function(grid, row, col)
 {
     if ( window.isNaN(row) || window.isNaN(col) )
     {
@@ -17,11 +17,11 @@ var getCellStatus = function(liveCells, row, col)
     }
     else
     {
-        return liveCells[[row,col]];
+        return grid[[row,col]];
     }
 };
 
-var getLiveNeighborCount = function(liveCells, row, col)
+var getLiveNeighborCount = function(grid, row, col)
 {
     var i, j;
     var liveNeighborCount = 0;
@@ -32,31 +32,31 @@ var getLiveNeighborCount = function(liveCells, row, col)
         {
             if (i === row && j === col) { continue; }
             
-            if ( getCellStatus(liveCells, i, j) ) { liveNeighborCount++; }
+            if ( getCellStatus(grid, i, j) ) { liveNeighborCount++; }
         }
     }
     
     return liveNeighborCount;
 };
 
-var getLiveNeighborCountOfLiveCell = function(liveCells, row, col)
+var getLiveNeighborCountOfLiveCell = function(grid, row, col)
 {
-    return getLiveNeighborCount(liveCells, row, col);
+    return getLiveNeighborCount(grid, row, col);
 };
 
-var getLiveNeighborCountOfDeadNeighborCell = function(liveCells, row, col)
+var getLiveNeighborCountOfDeadNeighborCell = function(grid, row, col)
 {
-    return getLiveNeighborCount(liveCells, row, col);
+    return getLiveNeighborCount(grid, row, col);
 };
 
-var getNextGeneration = function(liveCells)
+var getNextGeneration = function(grid)
 {
-    var nextGenLiveCells = new Array();
+    var nextGenGrid = new Array();
     var visitedDeadNeighbors = new Array();
     var row, col, i, j;
     var liveNeighborCount;
     
-    for ( key in liveCells )
+    for ( key in grid )
     {
         keyArray = key.split(",");
         row = window.parseInt(keyArray[0]);
@@ -73,23 +73,23 @@ var getNextGeneration = function(liveCells)
             {
                 if (i === row && j === col)
                 {
-                    liveNeighborCount = getLiveNeighborCountOfLiveCell(liveCells, row, col);
+                    liveNeighborCount = getLiveNeighborCountOfLiveCell(grid, row, col);
                     
                     if ( isLiveCellStillAlive(liveNeighborCount) ) 
                     { 
-                        nextGenLiveCells[[row,col]] = true;
+                        nextGenGrid[[row,col]] = true;
                     }
                 }
                 else
                 {
-                    if ( !liveCells[[i,j]] && !visitedDeadNeighbors[[i,j]] )
+                    if ( !grid[[i,j]] && !visitedDeadNeighbors[[i,j]] )
                     {
                         visitedDeadNeighbors[[i,j]] = true;
-                        liveNeighborCount = getLiveNeighborCountOfDeadNeighborCell(liveCells, i, j);
+                        liveNeighborCount = getLiveNeighborCountOfDeadNeighborCell(grid, i, j);
                         
                         if ( isDeadCellRevived(liveNeighborCount) )
                         {
-                            nextGenLiveCells[[i,j]] = true;
+                            nextGenGrid[[i,j]] = true;
                         }
                     }
                 }
@@ -97,5 +97,25 @@ var getNextGeneration = function(liveCells)
         }
     }
     
-    return nextGenLiveCells;
+    return nextGenGrid;
+};
+
+var createNewGrid = function()
+{
+    return new Array();
+};
+
+var createNewCell = function(xCoordinate, yCoordinate)
+{
+    return [xCoordinate, yCoordinate];
+};
+
+var addLiveCell = function(grid, liveCell)
+{
+    grid[ liveCell ] = true;
+};
+
+var addDeadCell = function(grid, deadCell)
+{
+    // do nothing -> grid cells are dead by default
 };

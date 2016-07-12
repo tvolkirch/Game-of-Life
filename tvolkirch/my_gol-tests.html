@@ -24,21 +24,9 @@ var asserts =
         return (value1 === value2);
     },
     
-    assertIsValidValue: function(value, validValueList)
+    assertInArray: function(value, refArray)
     {
-        var matchedValue = false;        
-        var valueCount = validValueList.length;
-
-        while (valueCount--)
-        {
-            if (value === validValueList[valueCount])
-            {
-                matchedValue = true;
-                break;
-            }
-        }
-        
-        return matchedValue;
+        return (refArray.indexOf(value) !== -1);
     }
 };
 
@@ -49,7 +37,7 @@ var liveGrid =
         return Math.floor(Math.random() * (max - min)) + min;
     },
     
-    getFlatGridMap(row, col)
+    getFlatGridMapForOneCell(row, col)
     {
         var positionList = new Array();
         
@@ -70,24 +58,40 @@ var liveGrid =
         var neighborhood = new Array();
         var positionList = new Array();
         var positionListSize = 0;
-        var counter, i;
+        var counter, randomPosition;
         
         if (liveNeighborCount === 0)
         {
             return neighborhood;
         }
         
-        positionList = liveGrid.getFlatGridMap(row, col);
+        positionList = liveGrid.getFlatGridMapForOneCell(row, col);
         
         for (counter = 0; counter < liveNeighborCount; counter++)
         {
-            positionListSize = Object.keys(positionList).length
-            i = liveGrid.getRandomInt(0, positionListSize);
-            neighborhood[ positionList[i] ] = true;
-            positionList.splice(i, 1);
+            positionListSize = positionList.length;
+            randomPosition = liveGrid.getRandomInt(0, positionListSize);
+            neighborhood[ positionList[randomPosition] ] = true;
+            positionList.splice(randomPosition, 1);
         }
         
         return neighborhood;
+    },
+
+    getFlatGridMapForSeedPattern(maxSeedGridXDimension, maxSeedGridYDimension)
+    {
+        var positionList = new Array();
+        var irow, icol;
+        
+        for (irow = 0; irow < maxSeedGridYDimension; irow++)
+        {
+            for (icol = 0; icol < maxSeedGridXDimension; icol++)
+            {
+                positionList[icol + (irow * maxSeedGridXDimension)] = [irow, icol];
+            }
+        }
+        
+        return positionList;
     },
     
     setSeedPatternThatDiesOutGen19()
@@ -228,28 +232,31 @@ var tests =
     
     testGetCellStatus: function()
     {
-        var liveCells = [];
+        var grid;
+        var cell;
         var isCellAlive;
     
-        if ( !window.getCellStatus )
+        if ( !window.createNewGrid || !window.createNewCell || !window.addLiveCell || !window.getCellStatus )
         {
             testPass = false;
             return;
         }
         
-        liveCells[[30, 30]] = true;
+        grid = createNewGrid();
+        cell = createNewCell(30, 30);
+        addLiveCell(grid, cell);
         
-        if ( !asserts.assertEqual(true, getCellStatus(liveCells, 30, 30)) )
+        if ( !asserts.assertEqual(true, getCellStatus(grid, 30, 30)) )
         {
             testPass = false;
         }
         
-        if ( !asserts.assertEqual(undefined, getCellStatus(liveCells, 30, 31)) )
+        if ( !asserts.assertEqual(undefined, getCellStatus(grid, 30, 31)) )
         {
             testPass = false;
         }
         
-        if ( !asserts.assertEqual(false, getCellStatus(liveCells, "A1", "B2")) )
+        if ( !asserts.assertEqual(false, getCellStatus(grid, "A1", "B2")) )
         {
             testPass = false;
         }
@@ -257,22 +264,170 @@ var tests =
     
     testGetLiveNeighborCount: function()
     {
-        var liveCells = new Array();
+        var grid;
         var liveNeighborCount;
         var row = 30;
         var col = 30;
             
-        if ( !window.getLiveNeighborCount )
+        if ( !window.createNewGrid || !window.getLiveNeighborCount )
+        {
+            testPass = false;
+            return;
+        }
+        
+        grid = createNewGrid();
+
+        for (liveNeighborCount = 0; liveNeighborCount < 9; liveNeighborCount++)
+        {
+            grid = liveGrid.setRandomLiveNeighbors(row, col, liveNeighborCount);
+            
+            if ( !asserts.assertEqual(liveNeighborCount, getLiveNeighborCount(grid, row, col)) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGridInitialization()
+    {
+        var grid;
+        var cell;
+        var liveCellCount = liveGrid.getRandomInt(10, 20);
+        var deadCellCount = liveGrid.getRandomInt(10, 20);
+        var maxSeedGridXDimension = liveGrid.getRandomInt(10, 20);
+        var maxSeedGridYDimension = liveGrid.getRandomInt(10, 20);
+
+        var positionList;
+        var positionListSize;
+        var coordinatePair = [];
+        var randomPosition;        
+        var xCoordinate;
+        var yCoordinate;
+        
+        var testLiveCellCount;
+        var randomTestCount = 100;
+        var validValueList = [undefined, true];
+        
+        var liveCellStatus = true;
+        var deadCellStatus = undefined;
+        var counter;
+    
+        if ( !window.createNewGrid || !window.createNewCell || !window.addLiveCell || !window.addDeadCell || !window.getCellStatus )
+        {
+            testPass = false;
+            return;
+        }
+        
+        grid = createNewGrid();
+            
+        if ( !asserts.assertEqual(grid.length, 0) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        if ( (liveCellCount + deadCellCount) > (maxSeedGridXDimension * maxSeedGridYDimension) )
         {
             testPass = false;
             return;
         }
 
-        for (liveNeighborCount = 0; liveNeighborCount < 9; liveNeighborCount++)
+        positionList = liveGrid.getFlatGridMapForSeedPattern(maxSeedGridXDimension, maxSeedGridYDimension);
+
+        for (counter = 0; counter < liveCellCount; counter++)
         {
-            liveCells = liveGrid.setRandomLiveNeighbors(row, col, liveNeighborCount);
+            positionListSize = positionList.length;
+            randomPosition = liveGrid.getRandomInt(0, positionListSize);
+            coordinatePair = positionList[randomPosition];
+            xCoordinate = coordinatePair[0];
+            yCoordinate = coordinatePair[1];
             
-            if ( !asserts.assertEqual(liveNeighborCount, getLiveNeighborCount(liveCells, row, col)) )
+            cell = createNewCell(xCoordinate, yCoordinate);
+            addLiveCell(grid, cell);
+            
+            positionList.splice(randomPosition, 1);            
+            
+            if ( !asserts.assertEqual(getCellStatus(grid, xCoordinate, yCoordinate), liveCellStatus) )
+            {
+                testPass = false;
+                break;
+            }
+            
+            positionListSize = positionList.length;
+            randomPosition = liveGrid.getRandomInt(0, positionListSize);
+            coordinatePair = positionList[randomPosition];
+            xCoordinate = coordinatePair[0];
+            yCoordinate = coordinatePair[1];
+            
+            cell = createNewCell(xCoordinate, yCoordinate);
+            addDeadCell(grid, cell);
+            
+            positionList.splice(randomPosition, 1);            
+            
+            if ( !asserts.assertEqual(getCellStatus(grid, xCoordinate, yCoordinate), deadCellStatus) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+        
+        testLiveCellCount = Object.keys(grid).length;
+            
+        if ( !testPass || !asserts.assertEqual(testLiveCellCount, liveCellCount) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        for (counter = 0; counter < randomTestCount; counter++)
+        {
+            xCoordinate = liveGrid.getRandomInt(0, maxSeedGridXDimension);
+            yCoordinate = liveGrid.getRandomInt(0, maxSeedGridYDimension);
+            
+            if ( !asserts.assertInArray(getCellStatus(grid, xCoordinate, yCoordinate), validValueList) )
+            {
+                testPass = false;
+                break;
+            }
+        }
+    },
+    
+    testGetNextGenerationWithNoLiveCells: function()
+    {    
+        var grid;
+        var nextGenLiveCells;
+        var maxSeedGridXDimension = liveGrid.getRandomInt(10, 20);
+        var maxSeedGridYDimension = liveGrid.getRandomInt(10, 20);
+        
+        var xCoordinate;
+        var yCoordinate;
+        
+        var randomTestCount = 100;        
+        var deadCellStatus = undefined;
+        var counter;
+
+        if ( !window.createNewGrid || !window.getNextGeneration )
+        {
+            testPass = false;
+            return;
+        }
+        
+        grid = createNewGrid();   
+        nextGenLiveCells = getNextGeneration(grid);
+                
+        if ( !asserts.assertEqual(nextGenLiveCells.length, 0) )
+        {
+            testPass = false;
+            return;
+        }
+        
+        for (counter = 0; counter < randomTestCount; counter++)
+        {
+            xCoordinate = liveGrid.getRandomInt(0, maxSeedGridXDimension);
+            yCoordinate = liveGrid.getRandomInt(0, maxSeedGridYDimension);
+            
+            if ( !asserts.assertEqual(getCellStatus(grid, xCoordinate, yCoordinate), deadCellStatus) )
             {
                 testPass = false;
                 break;
@@ -408,104 +563,8 @@ var tests =
                 break;
             }
         }
-    },
-    
-    testGridInitialization: function()
-    {
-        var maxCellTestCount = 150000;
-        var rows = 1000;
-        var cols = 1000;
-        var validValueList = [undefined, true];
-        var liveCells = [];
-        var isCellAlive;
-    
-        if ( !window.getCellStatus )
-        {
-            testPass = false;
-            return;
-        }
-        
-        liveCells = liveGrid.setSeedPatternThatDiesOutGen19();
-        
-        while (maxCellTestCount--)
-        {
-            rowPos = liveGrid.getRandomInt(0, rows);
-            colPos = liveGrid.getRandomInt(0, cols);
-            
-            isCellAlive = getCellStatus(liveCells, rowPos, colPos);
-            
-            if ( !asserts.assertIsValidValue(isCellAlive, validValueList) )
-            {
-                testPass = false;
-                break;
-            }
-        }
-    },
-    
-    testGetNextGeneration: function()
-    {    
-        var liveCells = new Array();
-        var nextGenLiveCells = new Array();
-        var key, keyArray = [];
-        var i;
-        var generations = 18;
-    
-        if ( !window.getNextGeneration )
-        {
-            testPass = false;
-            return;
-        }
-        
-        liveCells = liveGrid.setSeedPatternThatDiesOutGen19();        
-        nextGenLiveCells = getNextGeneration(liveCells);
-        
-        if ( !asserts.assertEqual(9, Object.keys(nextGenLiveCells).length) )
-        {
-            testPass = false;
-            return;
-        }
-
-        for (i = 3; i <= generations; i++)
-        {
-            liveCells = new Array();
-            
-            for ( key in nextGenLiveCells )
-            {
-                keyArray = key.split(",");
-                row = keyArray[0];
-                col = keyArray[1];
-                
-                liveCells[[row,col]] = true;
-            }
-
-            nextGenLiveCells = getNextGeneration(liveCells);
-        }
-        
-        if ( !asserts.assertEqual(2, Object.keys(nextGenLiveCells).length) )
-        {
-            testPass = false;
-            return;
-        }
-        
-        liveCells = new Array();
-            
-        for ( key in nextGenLiveCells )
-        {
-            keyArray = key.split(",");
-            row = keyArray[0];
-            col = keyArray[1];
-                
-            liveCells[[row,col]] = true;
-        }
-
-        nextGenLiveCells = getNextGeneration(liveCells);
-        
-        if ( !asserts.assertEqual(0, Object.keys(nextGenLiveCells).length) )
-        {
-            testPass = false;
-            return;
-        }
     }
+    
 };
 
 $.getScript(scriptName)
@@ -523,7 +582,6 @@ $.getScript(scriptName)
             {
                 tests[testname]();
                 
-                window.console.log(" ");
                 window.console.log(testname + " passes all tests: " + testPass);
                 
                 allTestsPass = allTestsPass && testPass;
@@ -542,6 +600,7 @@ $.getScript(scriptName)
     .fail(function() 
     {
         window.console.log("failed to load " + scriptName + " script for testing");
+        window.console.log("WARNING: Chrome browser might not be able to load the script with jQuery");
     });
 
 </script>
